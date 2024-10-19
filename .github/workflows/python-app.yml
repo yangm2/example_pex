@@ -1,0 +1,47 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python application
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  quality_checks:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+    - name: Define a cache dependency glob
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "requirements**.txt"
+    - name: Install dependencies
+      run: |
+        # install CI and script dependencies with uv to system (don't need venv in ephemeral job)
+        uv pip install mypy ruff pytest pytest-cov
+        if [ -f requirements.txt ]; then uv pip install -r requirements.txt; fi
+      env:
+        UV_SYSTEM_PYTHON: 1
+    - name: Lint
+      run: |
+        # Lint with ruff
+        ruff check --verbose --statistics --output-format github --target-version py313
+    - name: Type Check with mypy
+      run: |
+        mypy --verbose --python-version 3.13 --strict --pretty src
+    - name: Test with pytest
+      run: |
+        pytest --cov=src/ipados_batteryhealth --cov-fail-under=50
